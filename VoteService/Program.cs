@@ -27,15 +27,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Bật Swagger trên cả Render để test trực tiếp
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseRouting();
 app.UseCors("AllowAll");
 
-// Trang kiểm tra nhanh dịch vụ
+// Khai báo 2 route kiểm tra sức khỏe
 app.MapGet("/", () => "VoteService is RUNNING!");
+app.MapGet("/health", () => Results.Ok("OK")); // <--- Thêm dòng này để Render nhả lock
 
 app.MapControllers();
 
