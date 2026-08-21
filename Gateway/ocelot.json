@@ -10,7 +10,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls/{code}/vote",
-      "UpstreamHttpMethod": [ "Post", "Options" ]
+      "UpstreamHttpMethod": [ "Post" ]
     },
     {
       "DownstreamPathTemplate": "/api/polls",
@@ -22,7 +22,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls",
-      "UpstreamHttpMethod": [ "Get", "Post", "Options" ]
+      "UpstreamHttpMethod": [ "Get", "Post" ]
     },
     {
       "DownstreamPathTemplate": "/api/polls/{everything}",
@@ -34,7 +34,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls/{everything}",
-      "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete", "Patch", "Options" ]
+      "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete", "Patch" ]
     },
     {
       "DownstreamPathTemplate": "/hubs/{everything}",
@@ -46,7 +46,7 @@
         }
       ],
       "UpstreamPathTemplate": "/hubs/{everything}",
-      "UpstreamHttpMethod": [ "Get", "Post", "Options" ]
+      "UpstreamHttpMethod": [ "Get", "Post" ]
     }
   ],
   "GlobalConfiguration": {
