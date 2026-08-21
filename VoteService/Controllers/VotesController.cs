@@ -22,6 +22,7 @@ namespace VoteService.Controllers
         [HttpPost("{code}/vote")]
         public async Task<ActionResult<PollResultsDto>> Vote(string code, [FromBody] VoteRequest request)
         {
+            Console.WriteLine($"[VoteService Log] Nhan request vote cho code: {code}");
             var token = GetOrCreateVoterToken();
 
             try
@@ -51,6 +52,7 @@ namespace VoteService.Controllers
             }
             catch (KeyNotFoundException)
             {
+                Console.WriteLine($"[VoteService Error] Khong tim thấy Poll Code {code} trong Database");
                 return NotFound(new { error = "Poll not found." });
             }
             catch (InvalidOperationException)
@@ -75,8 +77,8 @@ namespace VoteService.Controllers
             Response.Cookies.Append(VoterCookie, token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true, // Bắt buộc true khi chạy trên HTTPS Render
-                SameSite = SameSiteMode.None, // Bắt buộc None để gửi Cookie từ Vercel sang Render
+                Secure = true, // Bắt buộc cho HTTPS trên Render
+                SameSite = SameSiteMode.None, // Cho phép Cross-Site từ Vercel sang Render
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
 
