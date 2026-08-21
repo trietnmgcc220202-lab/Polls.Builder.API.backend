@@ -25,21 +25,28 @@ namespace PollService.Controllers
             {
                 var poll = await _polls.CreatePollAsync(request.Question, request.Options);
 
-                // Đồng bộ poll mới sang VoteService (không làm fail API nếu VoteService lỗi)
+                // Đồng bộ poll mới sang VoteService
                 try
                 {
-                    var voteServiceUrl = _config["VoteServiceUrl"] ?? "https://pollbuilder-voteservice-nbjl.onrender.com";
-                    using var http = new HttpClient();
-                    await http.PostAsJsonAsync($"{voteServiceUrl}/api/internal/polls", new
+                    var baseUrl = (_config["VoteServiceUrl"] ?? "https://pollbuilder-voteservice-nbjl.onrender.com").TrimEnd('/');
+                    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                    
+                    var response = await http.PostAsJsonAsync($"{baseUrl}/api/internal/polls", new
                     {
                         Code = poll.Code,
                         Question = poll.Question,
                         Options = request.Options
                     });
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var errBody = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine($"[SYNC ERROR] VoteService returned {response.StatusCode}: {errBody}");
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Bỏ qua nếu VoteService tạm thời không phản hồi, không làm fail API tạo poll
+                    Console.WriteLine($"[SYNC EXCEPTION] Could not connect to VoteService: {ex.Message}");
                 }
 
                 return CreatedAtAction(nameof(Get), new { code = poll.Code }, poll);
@@ -78,12 +85,13 @@ namespace PollService.Controllers
             }
             try
             {
-                var realtimeUrl = _config["RealtimeServiceUrl"] ?? "https://pollbuilder-realtimeservice.onrender.com";
-                using var http = new HttpClient();
+                var realtimeUrl = (_config["RealtimeServiceUrl"] ?? "https://pollbuilder-realtimeservice.onrender.com").TrimEnd('/');
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
                 await http.PostAsJsonAsync($"{realtimeUrl}/api/notify/close", new { Code = code });
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[REALTIME ERROR] Failed to notify close: {ex.Message}");
             }
             return Ok(poll);
         }
