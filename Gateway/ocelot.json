@@ -10,47 +10,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls/{code}/vote",
-      "UpstreamHttpMethod": [ "Post", "Options" ],
-      "Priority": 10
-    },
-    {
-      "DownstreamPathTemplate": "/api/polls",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "pollbuilder-pollservice.onrender.com",
-          "Port": 443
-        }
-      ],
-      "UpstreamPathTemplate": "/api/polls",
-      "UpstreamHttpMethod": [ "Get", "Post", "Options" ],
-      "Priority": 1
-    },
-    {
-      "DownstreamPathTemplate": "/api/polls/{everything}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "pollbuilder-pollservice.onrender.com",
-          "Port": 443
-        }
-      ],
-      "UpstreamPathTemplate": "/api/polls/{everything}",
-      "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete", "Patch", "Options" ],
-      "Priority": 0
-    },
-    {
-      "DownstreamPathTemplate": "/hubs/{everything}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "pollbuilder-realtimeservice.onrender.com",
-          "Port": 443
-        }
-      ],
-      "UpstreamPathTemplate": "/hubs/{everything}",
-      "UpstreamHttpMethod": [ "Get", "Post", "Options" ],
-      "Priority": 1
+      "UpstreamHttpMethod": [ "POST" ]
     }
   ],
   "GlobalConfiguration": {
