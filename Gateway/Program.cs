@@ -10,7 +10,7 @@ builder.Logging.AddConsole();
 // 2. Load cấu hình ocelot.json
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 
-// 3. Nạp biến môi trường SAU cùng để có quyền ưu tiên cao nhất
+// 3. Nạp biến môi trường SAU cùng
 builder.Configuration.AddEnvironmentVariables();
 
 // 4. Cấu hình CORS
@@ -29,18 +29,26 @@ builder.Services.AddOcelot(builder.Configuration);
 
 var app = builder.Build();
 
-// 5. Đặt UseCors TRƯỚC UseWebSockets và UseOcelot
 app.UseCors("AllowFrontend");
-
 app.UseWebSockets();
 
-// === BỔ SUNG: Xử lý Health Check từ Render để không bị đẩy vào Ocelot gây log đỏ ===
-app.MapGet("/", () => "Gateway is running!");
-app.MapMethods("/", new[] { "HEAD" }, () => Results.Ok());
-// =================================================================================
+// === CẮM MIDDLEWARE CHẶN HEALTH CHECK TRƯỚC OCELOT ===
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/")
+    {
+        context.Response.StatusCode = 200;
+        if (context.Request.Method == "GET")
+        {
+            await context.Response.WriteAsync("Gateway is running!");
+        }
+        return; // Kết thúc request tại đây, không cho lọt xuống Ocelot
+    }
+    await next();
+});
+// ===================================================
 
 await app.UseOcelot();
 
-// 6. Render cấp port qua biến môi trường PORT — không được hardcode 5005.
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5005";
 app.Run($"http://0.0.0.0:{port}");
