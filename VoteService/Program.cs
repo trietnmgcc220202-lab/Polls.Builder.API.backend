@@ -8,8 +8,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Neon / PostgreSQL (dùng chung database với PollService)
-var conn = builder.Configuration.GetConnectionString("DefaultConnection"); // ← đã sửa
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(conn));
 
@@ -20,9 +19,6 @@ builder.Services.AddCors(o => o.AddPolicy("AllowAll", p =>
 
 var app = builder.Build();
 
-// Không cần EnsureCreated nữa vì PollService đã tạo bảng rồi
-// using (var scope = app.Services.CreateScope()) { ... }
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -32,7 +28,5 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 app.MapControllers();
 
-// Render cấp port qua biến môi trường PORT — đặt rõ ràng thay vì để mặc định.
-// Khi chạy local (không có biến PORT) sẽ tự fallback về 5002.
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5002";
 app.Run($"http://0.0.0.0:{port}");
