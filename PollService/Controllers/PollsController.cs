@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Json;
 using PollService.Contracts;
 using PollService.Services;
@@ -10,10 +10,12 @@ namespace PollService.Controllers
     public class PollsController : ControllerBase
     {
         private readonly IPollService _polls;
+        private readonly IConfiguration _config;
 
-        public PollsController(IPollService polls)
+        public PollsController(IPollService polls, IConfiguration config)
         {
             _polls = polls;
+            _config = config;
         }
 
         [HttpPost]
@@ -57,11 +59,12 @@ namespace PollService.Controllers
                 return NotFound(new { error = "Poll not found." });
             }
 
-            // Gửi thông báo đóng poll sang RealtimeService
+            // Gửi thông báo đóng poll sang RealtimeService trên Render
             try
             {
+                var realtimeUrl = _config["RealtimeServiceUrl"] ?? "https://pollbuilder-realtimeservice.onrender.com";
                 using var http = new HttpClient();
-                await http.PostAsJsonAsync("http://localhost:5003/api/notify/close", new { Code = code });
+                await http.PostAsJsonAsync($"{realtimeUrl}/api/notify/close", new { Code = code });
             }
             catch
             {
