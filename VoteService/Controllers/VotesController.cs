@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Net.Http.Json;
 using VoteService.Contracts;
+using VoteService.Data;
 using VoteService.Services;
 
 namespace VoteService.Controllers
@@ -10,17 +12,19 @@ namespace VoteService.Controllers
     public class VotesController : ControllerBase
     {
         private readonly IVoteService _votes;
+        private readonly AppDbContext _db;
         private readonly IConfiguration _config;
         private const string VoterCookie = "voter_token";
 
-        public VotesController(IVoteService votes, IConfiguration config)
+        public VotesController(IVoteService votes, AppDbContext db, IConfiguration config)
         {
             _votes = votes;
+            _db = db;
             _config = config;
         }
 
         [HttpPost("{code}/vote")]
-        public async Task<ActionResult<PollResultsDto>> Vote(string code, [FromBody] VoteRequest request)
+        public async Task<IActionResult> Vote(string code, [FromBody] VoteRequest request)
         {
             var token = GetOrCreateVoterToken();
 
@@ -40,17 +44,24 @@ namespace VoteService.Controllers
                             Results = result.Results
                         });
                     }
-                    catch
-                    {
-                        // Bỏ qua lỗi nếu RealtimeService không phản hồi
-                    }
+                    catch { }
                 }
 
                 return Ok(result.Results);
             }
             catch (KeyNotFoundException)
             {
-                return NotFound(new { error = "Poll not found." });
+                // Bắt bệnh DB: Trả về số lượng Poll đang có trong DB của VoteService
+                var totalPolls = await _db.Polls.CountAsync();
+                var sampleCodes = await _db.Polls.Select(p => p.Code).Take(5).ToListAsync();
+
+                return NotFound(new
+                {
+                    error = "Poll not found in VoteService Database.",
+                    searchingCode = code,
+                    totalPollsInVoteDb = totalPolls,
+                    availableCodesInVoteDb = sampleCodes
+                });
             }
             catch (InvalidOperationException)
             {
