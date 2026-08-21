@@ -3,52 +3,24 @@ using Ocelot.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Tắt EventLog của Windows để tránh lỗi crash khi dừng ứng dụng
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-
-// 2. Load cấu hình ocelot.json
-builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
-
-// 3. Nạp biến môi trường SAU cùng
-builder.Configuration.AddEnvironmentVariables();
-
-// 4. Cấu hình CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        policy.SetIsOriginAllowed(_ => true)
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowAnyMethod();
     });
 });
 
-builder.Services.AddOcelot(builder.Configuration);
+builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+builder.Services.AddOcelot();
 
 var app = builder.Build();
 
-app.UseCors("AllowFrontend");
-app.UseWebSockets();
-
-// === CẮM MIDDLEWARE CHẶN HEALTH CHECK TRƯỚC OCELOT ===
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path == "/")
-    {
-        context.Response.StatusCode = 200;
-        if (context.Request.Method == "GET")
-        {
-            await context.Response.WriteAsync("Gateway is running!");
-        }
-        return; // Kết thúc request tại đây, không cho lọt xuống Ocelot
-    }
-    await next();
-});
-// ===================================================
+app.UseCors("AllowAll");
 
 await app.UseOcelot();
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5005";
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 app.Run($"http://0.0.0.0:{port}");
