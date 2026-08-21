@@ -5,7 +5,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "ten-service-vote.onrender.com",
+          "Host": "pollbuilder-voteservice.onrender.com",
           "Port": 443
         }
       ],
@@ -17,7 +17,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "ten-service-poll.onrender.com",
+          "Host": "pollbuilder-pollservice.onrender.com",
           "Port": 443
         }
       ],
@@ -29,7 +29,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "ten-service-poll.onrender.com",
+          "Host": "pollbuilder-pollservice.onrender.com",
           "Port": 443
         }
       ],
@@ -41,7 +41,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "ten-service-realtime.onrender.com",
+          "Host": "pollbuilder-realtimeservice.onrender.com",
           "Port": 443
         }
       ],
