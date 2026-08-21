@@ -1,77 +1,52 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Http.Json;
-using PollService.Contracts;
-using PollService.Services;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using VoteService.Data;
+using VoteService.Models;
 
-namespace PollService.Controllers
+namespace VoteService.Controllers
 {
     [ApiController]
-    [Route("api/polls")]
-    public class PollsController : ControllerBase
+    [Route("api/internal/polls")]
+    public class InternalController : ControllerBase
     {
-        private readonly IPollService _polls;
-        private readonly IConfiguration _config;
+        private readonly AppDbContext _db;
 
-        public PollsController(IPollService polls, IConfiguration config)
+        public InternalController(AppDbContext db)
         {
-            _polls = polls;
-            _config = config;
+            _db = db;
+        }
+
+        public class SyncPollRequest
+        {
+            public string Code { get; set; } = "";
+            public string Question { get; set; } = "";
+            public List<string> Options { get; set; } = new();
         }
 
         [HttpPost]
-        public async Task<ActionResult<PollDto>> Create([FromBody] CreatePollRequest request)
+        public async Task<IActionResult> SyncPoll([FromBody] SyncPollRequest request)
         {
-            try
+            var exists = await _db.Polls.AnyAsync(p => p.Code == request.Code);
+            if (exists)
             {
-                var poll = await _polls.CreatePollAsync(request.Question, request.Options);
-                return CreatedAtAction(nameof(Get), new { code = poll.Code }, poll);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        [HttpGet("{code}")]
-        public async Task<ActionResult<PollDto>> Get(string code)
-        {
-            var poll = await _polls.GetPollAsync(code);
-            return poll is null
-                ? NotFound(new { error = "Poll not found." })
-                : Ok(poll);
-        }
-
-        [HttpGet("{code}/results")]
-        public async Task<ActionResult<PollResultsDto>> Results(string code)
-        {
-            var results = await _polls.GetResultsAsync(code);
-            return results is null
-                ? NotFound(new { error = "Poll not found." })
-                : Ok(results);
-        }
-
-        [HttpPatch("{code}/close")]
-        public async Task<ActionResult<PollDto>> Close(string code)
-        {
-            var poll = await _polls.ClosePollAsync(code);
-            if (poll is null)
-            {
-                return NotFound(new { error = "Poll not found." });
+                return Ok(new { message = "Poll already exists." });
             }
 
-            // Gửi thông báo đóng poll sang RealtimeService trên Render
-            try
+            var poll = new Poll
             {
-                var realtimeUrl = _config["RealtimeServiceUrl"] ?? "https://pollbuilder-realtimeservice.onrender.com";
-                using var http = new HttpClient();
-                await http.PostAsJsonAsync($"{realtimeUrl}/api/notify/close", new { Code = code });
-            }
-            catch
-            {
-                // Bỏ qua nếu RealtimeService chưa chạy, không làm fail API close
-            }
+                Id = Guid.NewGuid(),
+                Code = request.Code,
+                Question = request.Question,
+                OptionsJson = JsonSerializer.Serialize(request.Options),
+                IsClosed = false,
+                CreatedAt = DateTime.UtcNow
+            };
 
-            return Ok(poll);
+            _db.Polls.Add(poll);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { message = "Poll synced.", code = poll.Code });
         }
     }
 }
