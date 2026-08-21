@@ -22,14 +22,12 @@ namespace VoteService.Controllers
         [HttpPost("{code}/vote")]
         public async Task<ActionResult<PollResultsDto>> Vote(string code, [FromBody] VoteRequest request)
         {
-            Console.WriteLine($"[VoteService Log] Nhan request vote cho code: {code}");
             var token = GetOrCreateVoterToken();
 
             try
             {
                 var result = await _votes.VoteAsync(code, request.OptionIndex, token);
 
-                // Gửi thông báo realtime sang RealtimeService nếu là vote mới
                 if (result.IsNewVote)
                 {
                     try
@@ -44,7 +42,7 @@ namespace VoteService.Controllers
                     }
                     catch
                     {
-                        // Bỏ qua nếu RealtimeService chưa sẵn sàng
+                        // Bỏ qua lỗi nếu RealtimeService không phản hồi
                     }
                 }
 
@@ -52,7 +50,6 @@ namespace VoteService.Controllers
             }
             catch (KeyNotFoundException)
             {
-                Console.WriteLine($"[VoteService Error] Khong tim thấy Poll Code {code} trong Database");
                 return NotFound(new { error = "Poll not found." });
             }
             catch (InvalidOperationException)
@@ -77,8 +74,8 @@ namespace VoteService.Controllers
             Response.Cookies.Append(VoterCookie, token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true, // Bắt buộc khi chạy HTTPS Render
-                SameSite = SameSiteMode.None, // Cho phép Cross-Site từ Vercel sang Render
+                Secure = true,
+                SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
 
