@@ -7,9 +7,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.SetIsOriginAllowed(_ => true) // Thay thế AllowAnyOrigin để cho phép Credentials
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials(); // Bắt buộc khi Frontend dùng credentials: 'include'
     });
 });
 
