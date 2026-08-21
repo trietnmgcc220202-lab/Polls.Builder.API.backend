@@ -1,52 +1,91 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
-using VoteService.Data;
-using VoteService.Models;
+using System.Net.Http.Json;
+using PollService.Contracts;
+using PollService.Services;
 
-namespace VoteService.Controllers
+namespace PollService.Controllers
 {
     [ApiController]
-    [Route("api/internal/polls")]
-    public class InternalController : ControllerBase
+    [Route("api/polls")]
+    public class PollsController : ControllerBase
     {
-        private readonly AppDbContext _db;
+        private readonly IPollService _polls;
+        private readonly IConfiguration _config;
 
-        public InternalController(AppDbContext db)
+        public PollsController(IPollService polls, IConfiguration config)
         {
-            _db = db;
-        }
-
-        public class SyncPollRequest
-        {
-            public string Code { get; set; } = "";
-            public string Question { get; set; } = "";
-            public List<string> Options { get; set; } = new();
+            _polls = polls;
+            _config = config;
         }
 
         [HttpPost]
-        public async Task<IActionResult> SyncPoll([FromBody] SyncPollRequest request)
+        public async Task<ActionResult<PollDto>> Create([FromBody] CreatePollRequest request)
         {
-            var exists = await _db.Polls.AnyAsync(p => p.Code == request.Code);
-            if (exists)
+            try
             {
-                return Ok(new { message = "Poll already exists." });
+                var poll = await _polls.CreatePollAsync(request.Question, request.Options);
+
+                // Đồng bộ poll mới sang VoteService (không làm fail API nếu VoteService lỗi)
+                try
+                {
+                    var voteServiceUrl = _config["VoteServiceUrl"] ?? "https://pollbuilder-voteservice-nbjl.onrender.com";
+                    using var http = new HttpClient();
+                    await http.PostAsJsonAsync($"{voteServiceUrl}/api/internal/polls", new
+                    {
+                        Code = poll.Code,
+                        Question = poll.Question,
+                        Options = request.Options
+                    });
+                }
+                catch
+                {
+                    // Bỏ qua nếu VoteService tạm thời không phản hồi, không làm fail API tạo poll
+                }
+
+                return CreatedAtAction(nameof(Get), new { code = poll.Code }, poll);
             }
-
-            var poll = new Poll
+            catch (ArgumentException ex)
             {
-                Id = Guid.NewGuid(),
-                Code = request.Code,
-                Question = request.Question,
-                OptionsJson = JsonSerializer.Serialize(request.Options),
-                IsClosed = false,
-                CreatedAt = DateTime.UtcNow
-            };
+                return BadRequest(new { error = ex.Message });
+            }
+        }
 
-            _db.Polls.Add(poll);
-            await _db.SaveChangesAsync();
+        [HttpGet("{code}")]
+        public async Task<ActionResult<PollDto>> Get(string code)
+        {
+            var poll = await _polls.GetPollAsync(code);
+            return poll is null
+                ? NotFound(new { error = "Poll not found." })
+                : Ok(poll);
+        }
 
-            return Ok(new { message = "Poll synced.", code = poll.Code });
+        [HttpGet("{code}/results")]
+        public async Task<ActionResult<PollResultsDto>> Results(string code)
+        {
+            var results = await _polls.GetResultsAsync(code);
+            return results is null
+                ? NotFound(new { error = "Poll not found." })
+                : Ok(results);
+        }
+
+        [HttpPatch("{code}/close")]
+        public async Task<ActionResult<PollDto>> Close(string code)
+        {
+            var poll = await _polls.ClosePollAsync(code);
+            if (poll is null)
+            {
+                return NotFound(new { error = "Poll not found." });
+            }
+            try
+            {
+                var realtimeUrl = _config["RealtimeServiceUrl"] ?? "https://pollbuilder-realtimeservice.onrender.com";
+                using var http = new HttpClient();
+                await http.PostAsJsonAsync($"{realtimeUrl}/api/notify/close", new { Code = code });
+            }
+            catch
+            {
+            }
+            return Ok(poll);
         }
     }
 }
