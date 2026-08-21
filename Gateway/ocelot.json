@@ -29,7 +29,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "pollbuilder-voteservice-nbj1.onrender.com",
+          "Host": "pollbuilder-voteservice-nbjl.onrender.com",
           "Port": 443
         }
       ],
