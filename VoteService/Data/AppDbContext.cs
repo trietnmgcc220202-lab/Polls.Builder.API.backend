@@ -1,13 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using VoteService.Models;
 
 namespace VoteService.Data;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) :
-base(options)
-    { }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Poll> Polls => Set<Poll>();
     public DbSet<Vote> Votes => Set<Vote>();
@@ -16,6 +14,7 @@ base(options)
     {
         modelBuilder.Entity<Poll>(e =>
         {
+            e.ToTable("Polls");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.Code).IsUnique();
             e.Property(x => x.Code).HasMaxLength(12);
@@ -24,6 +23,7 @@ base(options)
 
         modelBuilder.Entity<Vote>(e =>
         {
+            e.ToTable("Votes");
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.PollId, x.VoterToken }).IsUnique(); 
             e.HasOne(x => x.Poll)
