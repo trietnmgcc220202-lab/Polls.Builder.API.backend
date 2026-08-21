@@ -36,6 +36,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseRouting();
 app.UseCors("AllowAll");
+
+// Health check endpoints (để Render health check pass)
+app.MapGet("/", () => Results.Ok("VoteService is running"));
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
 app.MapControllers();
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5002";
