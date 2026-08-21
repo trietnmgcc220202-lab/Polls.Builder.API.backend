@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using VoteService.Contracts;
 using VoteService.Data;
@@ -17,13 +17,12 @@ public class VoteService : IVoteService
 
     public async Task<VoteResultDto> VoteAsync(string code, int optionIndex, string voterToken)
     {
+        var cleanCode = code.Trim().ToLower();
         var poll = await _db.Polls
             .Include(p => p.Votes)
-            .FirstOrDefaultAsync(p => p.Code == code);
+            .FirstOrDefaultAsync(p => p.Code.ToLower() == cleanCode);
 
-        // ========== LOG TẠM ==========
-        Console.WriteLine($">>> [VoteService] Code={code}, Found={poll != null}, IsClosed={poll?.IsClosed}, VotesCount={poll?.Votes?.Count}");
-        // =============================
+        Console.WriteLine($">>> [VoteService Log] SearchCode={cleanCode}, Found={poll != null}, IsClosed={poll?.IsClosed}");
 
         if (poll is null)
             throw new KeyNotFoundException("Poll not found.");
@@ -36,15 +35,12 @@ public class VoteService : IVoteService
         if (optionIndex < 0 || optionIndex >= options.Count)
             throw new ArgumentOutOfRangeException(nameof(optionIndex), "Invalid option.");
 
-        // Kiểm tra đã vote chưa 
         var alreadyVoted = poll.Votes.Any(v => v.VoterToken == voterToken);
         if (alreadyVoted)
         {
-            // Trả về kết quả hiện tại, không tạo vote mới 
             return new VoteResultDto(false, ToResults(poll, options));
         }
 
-        // Tạo vote mới 
         var vote = new Vote
         {
             Id = Guid.NewGuid(),
@@ -57,7 +53,6 @@ public class VoteService : IVoteService
         _db.Votes.Add(vote);
         await _db.SaveChangesAsync();
 
-        // Reload votes để đếm chính xác 
         await _db.Entry(poll).Collection(p => p.Votes).LoadAsync();
 
         return new VoteResultDto(true, ToResults(poll, options));
