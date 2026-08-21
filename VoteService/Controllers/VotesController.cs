@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Json;
 using VoteService.Contracts;
 using VoteService.Services;
@@ -10,11 +10,13 @@ namespace VoteService.Controllers
     public class VotesController : ControllerBase
     {
         private readonly IVoteService _votes;
+        private readonly IConfiguration _config;
         private const string VoterCookie = "voter_token";
 
-        public VotesController(IVoteService votes)
+        public VotesController(IVoteService votes, IConfiguration config)
         {
             _votes = votes;
+            _config = config;
         }
 
         [HttpPost("{code}/vote")]
@@ -31,8 +33,9 @@ namespace VoteService.Controllers
                 {
                     try
                     {
+                        var realtimeUrl = _config["RealtimeServiceUrl"] ?? "https://pollbuilder-realtimeservice.onrender.com";
                         using var http = new HttpClient();
-                        await http.PostAsJsonAsync("http://localhost:5003/api/notify/vote", new
+                        await http.PostAsJsonAsync($"{realtimeUrl}/api/notify/vote", new
                         {
                             Code = code,
                             Results = result.Results
@@ -40,7 +43,7 @@ namespace VoteService.Controllers
                     }
                     catch
                     {
-                        // Nếu RealtimeService chưa chạy thì bỏ qua, không làm fail tiến trình vote
+                        // Bỏ qua nếu RealtimeService chưa sẵn sàng
                     }
                 }
 
@@ -72,8 +75,8 @@ namespace VoteService.Controllers
             Response.Cookies.Append(VoterCookie, token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.Lax,
+                Secure = true, // Bắt buộc true khi chạy trên HTTPS Render
+                SameSite = SameSiteMode.None, // Bắt buộc None để gửi Cookie từ Vercel sang Render
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
 
