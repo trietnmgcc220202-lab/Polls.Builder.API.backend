@@ -25,7 +25,6 @@ public class VoteService : IVoteService
             .Include(p => p.Votes)
             .FirstOrDefaultAsync(p => p.Code.ToLower() == cleanCode.ToLower());
 
-        // Nếu chưa có trong VoteService DB, tự động fetch từ PollService về lưu
         if (poll is null)
         {
             poll = await FetchAndSavePollAsync(cleanCode);
@@ -72,11 +71,14 @@ public class VoteService : IVoteService
             var pollServiceUrl = _config["PollServiceUrl"] ?? "https://polls-builder-api-backend.onrender.com";
             using var http = new HttpClient();
             var response = await http.GetAsync($"{pollServiceUrl}/api/polls/{code}");
-            
+
             if (!response.IsSuccessStatusCode) return null;
 
             var dto = await response.Content.ReadFromJsonAsync<ExternalPollDto>();
             if (dto is null) return null;
+
+            var existing = await _db.Polls.Include(p => p.Votes).FirstOrDefaultAsync(p => p.Code.ToLower() == dto.Code.ToLower());
+            if (existing != null) return existing;
 
             var newPoll = new Poll
             {
