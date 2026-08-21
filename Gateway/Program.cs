@@ -3,24 +3,25 @@ using Ocelot.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Bắt buộc đọc ocelot.json
+builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.SetIsOriginAllowed(_ => true) // Thay thế AllowAnyOrigin để cho phép Credentials
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials(); // Bắt buộc khi Frontend dùng credentials: 'include'
+              .AllowCredentials();
     });
 });
 
-builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
-builder.Services.AddOcelot();
+builder.Services.AddOcelot(builder.Configuration);
 
 var app = builder.Build();
 
 app.UseCors("AllowAll");
-
 await app.UseOcelot();
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
