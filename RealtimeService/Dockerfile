@@ -6,10 +6,10 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/RealtimeService/RealtimeService.csproj", "src/RealtimeService/"]
-RUN dotnet restore "src/RealtimeService/RealtimeService.csproj"
+COPY ["RealtimeService/RealtimeService.csproj", "RealtimeService/"]
+RUN dotnet restore "RealtimeService/RealtimeService.csproj"
 COPY . .
-WORKDIR "/src/src/RealtimeService"
+WORKDIR "/src/RealtimeService"
 RUN dotnet build "RealtimeService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
