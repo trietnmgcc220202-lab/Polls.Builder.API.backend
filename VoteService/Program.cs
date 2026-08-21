@@ -1,18 +1,22 @@
-using RealtimeService.Hubs;
+using Microsoft.EntityFrameworkCore;
+using VoteService.Data;
+using VoteService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Tắt EventLog để tránh lỗi crash khi dừng service
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-
 builder.Services.AddControllers();
-builder.Services.AddSignalR();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
-// Cấu hình CORS tương thích hoàn toàn với SignalR và Gateway
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(conn));
+
+builder.Services.AddScoped<IVoteService, VoteService.Services.VoteService>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
         policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
@@ -23,15 +27,20 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.UseCors("AllowFrontend");
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-// Health check endpoints (để Render health check pass)
-app.MapGet("/", () => Results.Ok("RealtimeService is running"));
+app.UseRouting();
+app.UseCors("AllowAll");
+
+// Health check
+app.MapGet("/", () => Results.Ok("VoteService is running"));
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapControllers();
-app.MapHub<PollHub>("/hubs/polls");
 
-// Render cấp port qua biến môi trường PORT
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5003";
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5002";
 app.Run($"http://0.0.0.0:{port}");
