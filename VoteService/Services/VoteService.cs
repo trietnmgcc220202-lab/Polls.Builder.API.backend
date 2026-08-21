@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using VoteService.Contracts;
@@ -9,10 +10,12 @@ namespace VoteService.Services;
 public class VoteService : IVoteService
 {
     private readonly AppDbContext _db;
+    private readonly IConfiguration _config;
 
-    public VoteService(AppDbContext db)
+    public VoteService(AppDbContext db, IConfiguration config)
     {
         _db = db;
+        _config = config;
     }
 
     public async Task<VoteResultDto> VoteAsync(string code, int optionIndex, string voterToken)
@@ -21,6 +24,12 @@ public class VoteService : IVoteService
         var poll = await _db.Polls
             .Include(p => p.Votes)
             .FirstOrDefaultAsync(p => p.Code.ToLower() == cleanCode.ToLower());
+
+        // Nếu chưa có trong VoteService DB, tự động fetch từ PollService về lưu
+        if (poll is null)
+        {
+            poll = await FetchAndSavePollAsync(cleanCode);
+        }
 
         if (poll is null)
             throw new KeyNotFoundException("Poll not found.");
@@ -54,6 +63,47 @@ public class VoteService : IVoteService
         await _db.Entry(poll).Collection(p => p.Votes).LoadAsync();
 
         return new VoteResultDto(true, ToResults(poll, options));
+    }
+
+    private async Task<Poll?> FetchAndSavePollAsync(string code)
+    {
+        try
+        {
+            var pollServiceUrl = _config["PollServiceUrl"] ?? "https://polls-builder-api-backend.onrender.com";
+            using var http = new HttpClient();
+            var response = await http.GetAsync($"{pollServiceUrl}/api/polls/{code}");
+            
+            if (!response.IsSuccessStatusCode) return null;
+
+            var dto = await response.Content.ReadFromJsonAsync<ExternalPollDto>();
+            if (dto is null) return null;
+
+            var newPoll = new Poll
+            {
+                Id = Guid.NewGuid(),
+                Code = dto.Code,
+                Question = dto.Question,
+                OptionsJson = JsonSerializer.Serialize(dto.Options),
+                IsClosed = dto.IsClosed
+            };
+
+            _db.Polls.Add(newPoll);
+            await _db.SaveChangesAsync();
+
+            return await _db.Polls.Include(p => p.Votes).FirstOrDefaultAsync(p => p.Id == newPoll.Id);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private class ExternalPollDto
+    {
+        public string Code { get; set; } = "";
+        public string Question { get; set; } = "";
+        public List<string> Options { get; set; } = new();
+        public bool IsClosed { get; set; }
     }
 
     private static PollResultsDto ToResults(Poll poll, List<string> options)
