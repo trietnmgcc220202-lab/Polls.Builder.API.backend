@@ -6,10 +6,10 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/VoteService/VoteService.csproj", "src/VoteService/"]
-RUN dotnet restore "src/VoteService/VoteService.csproj"
+COPY ["VoteService/VoteService.csproj", "VoteService/"]
+RUN dotnet restore "VoteService/VoteService.csproj"
 COPY . .
-WORKDIR "/src/src/VoteService"
+WORKDIR "/src/VoteService"
 RUN dotnet build "VoteService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
