@@ -1,0 +1,60 @@
+services:
+  pollservice:
+    build:
+      context: ./src/PollService
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - ConnectionStrings__DefaultConnection=${NEON_CONNECTION_STRING}
+
+  voteservice:
+    build:
+      context: ./src/VoteService
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - ConnectionStrings__DefaultConnection=${NEON_CONNECTION_STRING}
+
+  realtimeservice:
+    build:
+      context: ./src/RealtimeService
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+
+  gateway:
+    build:
+      context: ./src/Gateway
+      dockerfile: Dockerfile
+    ports:
+      - "5005:5005"
+    environment:
+      - PORT=5005
+      # Trong mạng Docker, gọi nhau bằng TÊN SERVICE thay vì localhost
+      - Routes__0__DownstreamHostAndPorts__0__Host=voteservice
+      - Routes__0__DownstreamHostAndPorts__0__Port=5002
+      - Routes__0__DownstreamScheme=http
+
+      - Routes__1__DownstreamHostAndPorts__0__Host=pollservice
+      - Routes__1__DownstreamHostAndPorts__0__Port=5001
+      - Routes__1__DownstreamScheme=http
+
+      - Routes__2__DownstreamHostAndPorts__0__Host=pollservice
+      - Routes__2__DownstreamHostAndPorts__0__Port=5001
+      - Routes__2__DownstreamScheme=http
+
+      - Routes__3__DownstreamHostAndPorts__0__Host=realtimeservice
+      - Routes__3__DownstreamHostAndPorts__0__Port=5003
+      - Routes__3__DownstreamScheme=http
+
+      - GlobalConfiguration__BaseUrl=http://localhost:5005
+    depends_on:
+      - pollservice
+      - voteservice
+      - realtimeservice
