@@ -77,7 +77,7 @@ namespace VoteService.Controllers
             Response.Cookies.Append(VoterCookie, token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true, // Bắt buộc cho HTTPS trên Render
+                Secure = true, // Bắt buộc khi chạy HTTPS Render
                 SameSite = SameSiteMode.None, // Cho phép Cross-Site từ Vercel sang Render
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
