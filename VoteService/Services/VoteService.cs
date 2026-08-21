@@ -17,12 +17,10 @@ public class VoteService : IVoteService
 
     public async Task<VoteResultDto> VoteAsync(string code, int optionIndex, string voterToken)
     {
-        var cleanCode = code.Trim().ToLower();
+        var cleanCode = code.Trim();
         var poll = await _db.Polls
             .Include(p => p.Votes)
-            .FirstOrDefaultAsync(p => p.Code.ToLower() == cleanCode);
-
-        Console.WriteLine($">>> [VoteService Log] SearchCode={cleanCode}, Found={poll != null}, IsClosed={poll?.IsClosed}");
+            .FirstOrDefaultAsync(p => p.Code.ToLower() == cleanCode.ToLower());
 
         if (poll is null)
             throw new KeyNotFoundException("Poll not found.");
