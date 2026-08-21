@@ -10,8 +10,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls/{code}/vote",
-      "UpstreamHttpMethod": [ "Post" ],
-      "Priority": 2
+      "UpstreamHttpMethod": [ "Post", "Options" ],
+      "Priority": 10
     },
     {
       "DownstreamPathTemplate": "/api/polls",
@@ -23,7 +23,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls",
-      "UpstreamHttpMethod": [ "Get", "Post" ],
+      "UpstreamHttpMethod": [ "Get", "Post", "Options" ],
       "Priority": 1
     },
     {
@@ -36,7 +36,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls/{everything}",
-      "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete", "Patch" ],
+      "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete", "Patch", "Options" ],
       "Priority": 0
     },
     {
@@ -49,7 +49,7 @@
         }
       ],
       "UpstreamPathTemplate": "/hubs/{everything}",
-      "UpstreamHttpMethod": [ "Get", "Post" ],
+      "UpstreamHttpMethod": [ "Get", "Post", "Options" ],
       "Priority": 1
     }
   ],
