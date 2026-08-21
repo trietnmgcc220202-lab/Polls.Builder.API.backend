@@ -25,6 +25,10 @@ var app = builder.Build();
 
 app.UseCors("AllowFrontend");
 
+// Health check endpoint (bắt buộc để Render pass health check)
+app.MapGet("/", () => Results.Ok("RealtimeService is running"));
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
 app.MapControllers();
 app.MapHub<PollHub>("/hubs/polls");
 
