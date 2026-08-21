@@ -2,11 +2,11 @@
   "Routes": [
     {
       "DownstreamPathTemplate": "/api/polls/{code}/vote",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5002
+          "Host": "ten-service-vote.onrender.com",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/polls/{code}/vote",
@@ -14,11 +14,11 @@
     },
     {
       "DownstreamPathTemplate": "/api/polls",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5001
+          "Host": "ten-service-poll.onrender.com",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/polls",
@@ -26,11 +26,11 @@
     },
     {
       "DownstreamPathTemplate": "/api/polls/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5001
+          "Host": "ten-service-poll.onrender.com",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/polls/{everything}",
@@ -38,11 +38,11 @@
     },
     {
       "DownstreamPathTemplate": "/hubs/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5003
+          "Host": "ten-service-realtime.onrender.com",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/hubs/{everything}",
@@ -50,6 +50,6 @@
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "http://localhost:5005"
+    "BaseUrl": "https://pollbuilder-gateway-r33h.onrender.com"
   }
 }
