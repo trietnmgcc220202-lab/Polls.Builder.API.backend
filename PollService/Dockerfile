@@ -6,10 +6,10 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/PollService/PollService.csproj", "src/PollService/"]
-RUN dotnet restore "src/PollService/PollService.csproj"
+COPY ["PollService/PollService.csproj", "PollService/"]
+RUN dotnet restore "PollService/PollService.csproj"
 COPY . .
-WORKDIR "/src/src/PollService"
+WORKDIR "/src/PollService"
 RUN dotnet build "PollService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
