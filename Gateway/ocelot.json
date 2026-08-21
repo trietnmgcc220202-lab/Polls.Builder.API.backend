@@ -1,6 +1,30 @@
 {
   "Routes": [
     {
+      "DownstreamPathTemplate": "/api/polls",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "pollbuilder-pollservice.onrender.com",
+          "Port": 443
+        }
+      ],
+      "UpstreamPathTemplate": "/api/polls",
+      "UpstreamHttpMethod": [ "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/polls/{code}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "pollbuilder-pollservice.onrender.com",
+          "Port": 443
+        }
+      ],
+      "UpstreamPathTemplate": "/api/polls/{code}",
+      "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
       "DownstreamPathTemplate": "/api/polls/{code}/vote",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
