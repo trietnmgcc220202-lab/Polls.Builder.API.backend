@@ -14,7 +14,7 @@ public class AppDbContext : DbContext
     {
         modelBuilder.Entity<Poll>(e =>
         {
-            e.ToTable("Polls");
+            // Đã xóa e.ToTable("Polls") để khớp với PollService
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.Code).IsUnique();
             e.Property(x => x.Code).HasMaxLength(12);
@@ -23,7 +23,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Vote>(e =>
         {
-            e.ToTable("Votes");
+            // Đã xóa e.ToTable("Votes") để khớp với PollService
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.PollId, x.VoterToken }).IsUnique(); 
             e.HasOne(x => x.Poll)
