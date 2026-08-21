@@ -3,8 +3,11 @@ using Ocelot.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Bắt buộc đọc ocelot.json
-builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+builder.Configuration.AddJsonFile(
+    "ocelot.json",
+    optional: false,
+    reloadOnChange: true
+);
 
 builder.Services.AddCors(options =>
 {
@@ -22,6 +25,14 @@ builder.Services.AddOcelot(builder.Configuration);
 var app = builder.Build();
 
 app.UseCors("AllowAll");
+
+// TEST GATEWAY
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "Gateway",
+    status = "running"
+}));
+
 await app.UseOcelot();
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
