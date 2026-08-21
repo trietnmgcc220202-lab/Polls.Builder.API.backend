@@ -25,6 +25,7 @@ public class VoteService : IVoteService
             .Include(p => p.Votes)
             .FirstOrDefaultAsync(p => p.Code.ToLower() == cleanCode.ToLower());
 
+        // Tự động kéo poll về từ PollService nếu chưa có trong DB của VoteService
         if (poll is null)
         {
             poll = await FetchAndSavePollAsync(cleanCode);
