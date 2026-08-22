@@ -29,19 +29,22 @@ builder.Services.AddCors(options =>
     });
 });
 
-// JWT Authentication
+// JWT Authentication - Đã tối ưu nhận Token từ AccountService
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidateLifetime = true
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "MySuperSecretKeyForPollBuilderApp2026ExactKeyMustBe32CharsLong!")),
+            
+            // Tắt kiểm tra Issuer và Audience để tránh lỗi lệch tên miền giữa Render và Local/Gateway
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(5)
         };
     });
 
@@ -58,10 +61,10 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseCors("AllowAll");
 
-app.UseAuthentication(); // <-- Bắt buộc phải có để xài Token
+app.UseAuthentication();
 app.UseAuthorization();
 
-// Health check endpoints (bắt buộc để Render pass health check)
+// Health check endpoints
 app.MapGet("/", () => Results.Ok("PollService is running"));
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
