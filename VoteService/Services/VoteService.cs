@@ -1,127 +1,83 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using VoteService.Contracts;
 using VoteService.Data;
 using VoteService.Models;
 
-namespace VoteService.Services;
-
-public class VoteService : IVoteService
+namespace VoteService.Services
 {
-    private readonly AppDbContext _db;
-    private readonly IConfiguration _config;
-
-    public VoteService(AppDbContext db, IConfiguration config)
+    public class VoteService(AppDbContext db) : IVoteService
     {
-        _db = db;
-        _config = config;
-    }
+        private readonly AppDbContext _db = db;
 
-    public async Task<VoteResultDto> VoteAsync(string code, int optionIndex, string voterToken)
-    {
-        var cleanCode = code.Trim();
-        var poll = await _db.Polls
-            .Include(p => p.Votes)
-            .FirstOrDefaultAsync(p => p.Code.ToLower() == cleanCode.ToLower());
-
-        // Tự động kéo poll về từ PollService nếu chưa có trong DB của VoteService
-        if (poll is null)
+        public async Task<VoteResultDto> VoteAsync(string code, int optionIndex, string voterToken)
         {
-            poll = await FetchAndSavePollAsync(cleanCode);
-        }
+            Poll? poll = await _db.Polls
+                .Include(p => p.Votes)
+                .FirstOrDefaultAsync(p => p.Code == code);
 
-        if (poll is null)
-            throw new KeyNotFoundException("Poll not found.");
+            
+            Console.WriteLine($">>> [VoteService] Code={code}, Found={poll != null}, IsClosed={poll?.IsClosed}, VotesCount={poll?.Votes?.Count}");
+            // =============================
 
-        if (poll.IsClosed)
-            throw new InvalidOperationException("Poll is closed.");
+            if (poll is null)
+            {
+                throw new KeyNotFoundException("Poll not found.");
+            }
 
-        var options = JsonSerializer.Deserialize<List<string>>(poll.OptionsJson) ?? new();
+            if (poll.IsClosed)
+            {
+                throw new InvalidOperationException("Poll is closed.");
+            }
 
-        if (optionIndex < 0 || optionIndex >= options.Count)
-            throw new ArgumentOutOfRangeException(nameof(optionIndex), "Invalid option.");
+            List<string> options = JsonSerializer.Deserialize<List<string>>(poll.OptionsJson) ?? [];
 
-        var alreadyVoted = poll.Votes.Any(v => v.VoterToken == voterToken);
-        if (alreadyVoted)
-        {
-            return new VoteResultDto(false, ToResults(poll, options));
-        }
+            if (optionIndex < 0 || optionIndex >= options.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(optionIndex), "Invalid option.");
+            }
 
-        var vote = new Vote
-        {
-            Id = Guid.NewGuid(),
-            PollId = poll.Id,
-            OptionIndex = optionIndex,
-            VoterToken = voterToken,
-            CreatedAt = DateTime.UtcNow
-        };
+            // Kiểm tra đã vote chưa 
+            bool alreadyVoted = poll.Votes.Any(v => v.VoterToken == voterToken);
+            if (alreadyVoted)
+            {
+                // Trả về kết quả hiện tại, không tạo vote mới 
+                return new VoteResultDto(false, ToResults(poll, options));
+            }
 
-        _db.Votes.Add(vote);
-        await _db.SaveChangesAsync();
-
-        await _db.Entry(poll).Collection(p => p.Votes).LoadAsync();
-
-        return new VoteResultDto(true, ToResults(poll, options));
-    }
-
-    private async Task<Poll?> FetchAndSavePollAsync(string code)
-    {
-        try
-        {
-            var pollServiceUrl = _config["PollServiceUrl"] ?? "https://polls-builder-api-backend.onrender.com";
-            using var http = new HttpClient();
-            var response = await http.GetAsync($"{pollServiceUrl}/api/polls/{code}");
-
-            if (!response.IsSuccessStatusCode) return null;
-
-            var dto = await response.Content.ReadFromJsonAsync<ExternalPollDto>();
-            if (dto is null) return null;
-
-            var existing = await _db.Polls.Include(p => p.Votes).FirstOrDefaultAsync(p => p.Code.ToLower() == dto.Code.ToLower());
-            if (existing != null) return existing;
-
-            var newPoll = new Poll
+            // Tạo vote mới 
+            var vote = new Vote
             {
                 Id = Guid.NewGuid(),
-                Code = dto.Code,
-                Question = dto.Question,
-                OptionsJson = JsonSerializer.Serialize(dto.Options),
-                IsClosed = dto.IsClosed
+                PollId = poll.Id,
+                OptionIndex = optionIndex,
+                VoterToken = voterToken,
+                CreatedAt = DateTime.UtcNow
             };
 
-            _db.Polls.Add(newPoll);
-            await _db.SaveChangesAsync();
+            _ = _db.Votes.Add(vote);
+            _ = await _db.SaveChangesAsync();
 
-            return await _db.Polls.Include(p => p.Votes).FirstOrDefaultAsync(p => p.Id == newPoll.Id);
+            // Reload votes để đếm chính xác 
+            await _db.Entry(poll).Collection(p => p.Votes).LoadAsync();
+
+            return new VoteResultDto(true, ToResults(poll, options));
         }
-        catch
+
+        private static PollResultsDto ToResults(Poll poll, List<string> options)
         {
-            return null;
+            var counts = options
+                .Select((_, index) => poll.Votes.Count(v => v.OptionIndex == index))
+                .ToList();
+
+            return new PollResultsDto(
+                poll.Code,
+                poll.Question,
+                [.. options.Select((text, i) => new PollOptionDto(i, text))],
+                counts,
+                counts.Sum(),
+                poll.IsClosed ? "closed" : "open"
+            );
         }
-    }
-
-    private class ExternalPollDto
-    {
-        public string Code { get; set; } = "";
-        public string Question { get; set; } = "";
-        public List<string> Options { get; set; } = new();
-        public bool IsClosed { get; set; }
-    }
-
-    private static PollResultsDto ToResults(Poll poll, List<string> options)
-    {
-        var counts = options
-            .Select((_, index) => poll.Votes.Count(v => v.OptionIndex == index))
-            .ToList();
-
-        return new PollResultsDto(
-            poll.Code,
-            poll.Question,
-            options.Select((text, i) => new PollOptionDto(i, text)).ToList(),
-            counts,
-            counts.Sum(),
-            poll.IsClosed ? "closed" : "open"
-        );
     }
 }
