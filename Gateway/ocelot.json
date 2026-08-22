@@ -54,7 +54,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "pollbuilder-accountservice.onrender.com",
+          "Host": "pollbuilder-accountservice1.onrender.com",
           "Port": 443
         }
       ],
@@ -66,7 +66,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "pollbuilder-accountservice.onrender.com",
+          "Host": "pollbuilder-accountservice1.onrender.com",
           "Port": 443
         }
       ],
