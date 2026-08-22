@@ -20,13 +20,23 @@ namespace PollService.Controllers
             _config = config;
         }
 
+        // Hàm phụ lấy UserId an toàn (hỗ trợ cả nameid, sub, và ClaimTypes)
+        private bool TryGetUserId(out Guid userId)
+        {
+            userId = Guid.Empty;
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                     ?? User.FindFirst("nameid")?.Value 
+                     ?? User.FindFirst("sub")?.Value;
+
+            return !string.IsNullOrEmpty(claim) && Guid.TryParse(claim, out userId);
+        }
+
         // TẠO POLL
         [Authorize]
         [HttpPost]
         public async Task<ActionResult<PollDto>> Create([FromBody] CreatePollRequest request)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+            if (!TryGetUserId(out var userId))
             {
                 return Unauthorized(new { error = "Không xác định được người dùng." });
             }
@@ -67,13 +77,12 @@ namespace PollService.Controllers
             }
         }
 
-        // LỊCH SỬ POLL CỦA TÔI — phải đặt TRƯỚC {code}
+        // LỊCH SỬ POLL CỦA TÔI
         [Authorize]
         [HttpGet("my-polls")]
         public async Task<ActionResult<IEnumerable<PollDto>>> GetMyPolls()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+            if (!TryGetUserId(out var userId))
             {
                 return Unauthorized(new { error = "Không xác định được người dùng." });
             }
@@ -106,8 +115,7 @@ namespace PollService.Controllers
         [HttpPatch("{code:regex(^[[A-Z0-9]]{{6}}$)}/close")]
         public async Task<ActionResult<PollDto>> Close(string code)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+            if (!TryGetUserId(out var userId))
             {
                 return Unauthorized(new { error = "Không xác định được người dùng." });
             }
