@@ -1,147 +1,74 @@
+using AccountService.Data;
+using AccountService.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using AccountService.Data;
-using AccountService.Models;
 
-namespace AccountService.Controllers
+namespace AccountService.Controllers;
+
+[Route("api/auth")]
+[ApiController]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/auth")]
-    public class AuthController : ControllerBase
+    private readonly AccountDbContext _context;
+    private readonly IConfiguration _configuration;
+
+    public AuthController(AccountDbContext context, IConfiguration configuration)
     {
-        private readonly AccountDbContext _context;
+        _context = context;
+        _configuration = configuration;
+    }
 
-        public AuthController(AccountDbContext context)
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+            return BadRequest("Email này đã được sử dụng.");
+
+        var user = new User
         {
-            _context = context;
-        }
+            Email = request.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+        };
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest model)
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Message = "Đăng ký thành công!" });
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            return Unauthorized("Email hoặc mật khẩu không đúng.");
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!);
+        var tokenDescriptor = new SecurityTokenDescriptor
         {
-            try
-            {
-                if (model == null || string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
-                {
-                    return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
-                }
-
-                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email.Trim());
-                if (existingUser != null)
-                {
-                    return BadRequest(new { message = "Email này đã được đăng ký." });
-                }
-
-                string hash;
-                try
-                {
-                    hash = BCrypt.Net.BCrypt.HashPassword(model.Password);
-                }
-                catch
-                {
-                    hash = model.Password;
-                }
-
-                var user = new User
-                {
-                    Email = model.Email.Trim(),
-                    PasswordHash = hash,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-
-                var token = GenerateJwtToken(user);
-                return Ok(new { token = token, Token = token, userId = user.Id, email = user.Email });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"DB Error Register: {ex.InnerException?.Message ?? ex.Message}" });
-            }
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest model)
-        {
-            try
-            {
-                if (model == null || string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
-                {
-                    return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
-                }
-
-                var cleanEmail = model.Email.Trim();
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == cleanEmail);
-                if (user == null)
-                {
-                    return Unauthorized(new { message = "Email hoặc Mật khẩu không chính xác." });
-                }
-
-                bool isValid = false;
-                if (!string.IsNullOrEmpty(user.PasswordHash))
-                {
-                    try
-                    {
-                        isValid = BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash);
-                    }
-                    catch
-                    {
-                        isValid = (user.PasswordHash == model.Password);
-                    }
-                }
-
-                if (!isValid)
-                {
-                    return Unauthorized(new { message = "Email hoặc Mật khẩu không chính xác." });
-                }
-
-                var token = GenerateJwtToken(user);
-                return Ok(new { token = token, Token = token, userId = user.Id, email = user.Email });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"DB Error Login: {ex.InnerException?.Message ?? ex.Message}" });
-            }
-        }
-
-        private string GenerateJwtToken(User user)
-        {
-            string jwtKey = "MotDoanMaBaoMatRatDaiVaKhoDoanChoPollBuilder123!@#";
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new List<Claim>
+            Subject = new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim("sub", user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email ?? ""),
-                new Claim("email", user.Email ?? "")
-            };
+                new Claim(ClaimTypes.Email, user.Email)
+            }),
+            Expires = DateTime.UtcNow.AddDays(7),
+            Issuer = _configuration["Jwt:Issuer"],
+            Audience = _configuration["Jwt:Audience"],
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        };
 
-            var token = new JwtSecurityToken(
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(7),
-                signingCredentials: creds
-            );
+        var token = tokenHandler.CreateToken(tokenDescriptor);
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-    }
-
-    public class RegisterRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-    }
-
-    public class LoginRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
+        return Ok(new
+        {
+            Token = tokenHandler.WriteToken(token),
+            UserId = user.Id,
+            Email = user.Email
+        });
     }
 }
