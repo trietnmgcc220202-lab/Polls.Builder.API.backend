@@ -20,7 +20,7 @@ namespace PollService.Controllers
             _config = config;
         }
 
-        // 1. TẠO POLL (Bạn làm chuẩn rồi, giữ nguyên)
+        // TẠO POLL
         [Authorize]
         [HttpPost]
         public async Task<ActionResult<PollDto>> Create([FromBody] CreatePollRequest request)
@@ -38,7 +38,7 @@ namespace PollService.Controllers
                 // Đồng bộ poll mới sang VoteService
                 try
                 {
-                    var baseUrl = (_config["VoteServiceUrl"] ?? "https://pollbuilder-voteservice-nbjl.onrender.com").TrimEnd('/');
+                    var baseUrl = (_config["VoteServiceUrl"] ?? "https://pollbuilder-voteservice.onrender.com").TrimEnd('/');
                     using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
                     var response = await http.PostAsJsonAsync($"{baseUrl}/api/internal/polls", new
@@ -67,9 +67,7 @@ namespace PollService.Controllers
             }
         }
 
-        // --------------------------------------------------------
-        // BỔ SUNG MỚI: API XEM LỊCH SỬ POLL CỦA TÔI
-        // --------------------------------------------------------
+        // LỊCH SỬ POLL CỦA TÔI — phải đặt TRƯỚC {code}
         [Authorize]
         [HttpGet("my-polls")]
         public async Task<ActionResult<IEnumerable<PollDto>>> GetMyPolls()
@@ -80,14 +78,12 @@ namespace PollService.Controllers
                 return Unauthorized(new { error = "Không xác định được người dùng." });
             }
 
-            // Gọi service lấy danh sách poll theo ID người dùng
             var myPolls = await _polls.GetPollsByUserAsync(userId);
             return Ok(myPolls);
         }
-        // --------------------------------------------------------
 
-
-        [HttpGet("{code}")]
+        // LẤY 1 POLL THEO MÃ (chỉ mã 6 ký tự A-Z0-9)
+        [HttpGet("{code:regex(^[[A-Z0-9]]{{6}}$)}")]
         public async Task<ActionResult<PollDto>> Get(string code)
         {
             var poll = await _polls.GetPollAsync(code);
@@ -96,7 +92,7 @@ namespace PollService.Controllers
                 : Ok(poll);
         }
 
-        [HttpGet("{code}/results")]
+        [HttpGet("{code:regex(^[[A-Z0-9]]{{6}}$)}/results")]
         public async Task<ActionResult<PollResultsDto>> Results(string code)
         {
             var results = await _polls.GetResultsAsync(code);
@@ -105,25 +101,20 @@ namespace PollService.Controllers
                 : Ok(results);
         }
 
-        // --------------------------------------------------------
-        // CẬP NHẬT LẠI: API ĐÓNG POLL (Chặn người lạ đóng)
-        // --------------------------------------------------------
+        // ĐÓNG POLL
         [Authorize]
-        [HttpPatch("{code}/close")]
+        [HttpPatch("{code:regex(^[[A-Z0-9]]{{6}}$)}/close")]
         public async Task<ActionResult<PollDto>> Close(string code)
         {
-            // Lấy ID người đang thực hiện request
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
             {
                 return Unauthorized(new { error = "Không xác định được người dùng." });
             }
 
-            // Lấy thông tin Poll ra trước để kiểm tra quyền
             var pollCheck = await _polls.GetPollAsync(code);
             if (pollCheck == null) return NotFound(new { error = "Poll not found." });
 
-            // Kiểm tra chủ sở hữu
             if (pollCheck.CreatorId != userId)
             {
                 return StatusCode(403, new { error = "Bạn không có quyền đóng Poll của người khác!" });
