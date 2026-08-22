@@ -1,3 +1,4 @@
+// [BACKEND] File: PollService / Program.cs
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -51,12 +52,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
             
-            // Tắt kiểm tra Issuer & Audience để không bị lỗi tên miền trên Render / Gateway
+            // Tắt kiểm tra Issuer, Audience & Lifetime để loại trừ lỗi tên miền và lệch múi giờ trên Render
             ValidateIssuer = false,
             ValidateAudience = false,
-            
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(5)
+            ValidateLifetime = false, 
+            ClockSkew = TimeSpan.Zero
+        };
+
+        // BẮT BỆNH: In lý do chi tiết ra Render Logs nếu Token bị từ chối
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"❌ [JWT ERROR]: Auth thất bại -> {context.Exception.Message}");
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Console.WriteLine($"⚠️ [JWT CHALLENGE]: Request bị từ chối (401) -> Error: {context.Error}, Description: {context.ErrorDescription}");
+                return Task.CompletedTask;
+            }
         };
     });
 
