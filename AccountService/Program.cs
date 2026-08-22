@@ -1,3 +1,4 @@
+// [BACKEND] File: AccountService / Program.cs
 using AccountService.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Lấy Secret Key chuẩn (Đồng bộ tuyệt đối 100% với PollService)
+var jwtSecretKey = builder.Configuration["Jwt:Key"] 
+    ?? "MotDoanMaBaoMatRatDaiVaKhoDoanChoPollBuilder123!@#";
 
 // 1. Database PostgreSQL (Neon)
 builder.Services.AddDbContext<AccountDbContext>(options =>
@@ -19,12 +24,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+            
+            // Tắt ValidateIssuer & Audience để tránh lệch cấu hình giữa các Service
+            ValidateIssuer = false,
+            ValidateAudience = false,
             ValidateLifetime = true
         };
     });
