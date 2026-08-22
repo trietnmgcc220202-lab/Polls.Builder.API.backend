@@ -7,7 +7,6 @@ using System.Security.Claims;
 using System.Text;
 using AccountService.Data;
 using AccountService.Models;
-using AccountService.Entities;
 
 namespace AccountService.Controllers
 {
@@ -73,7 +72,7 @@ namespace AccountService.Controllers
             }
             catch
             {
-                isPasswordValid = user.PasswordHash == model.Password; // Fallback so sánh trực tiếp nếu mật khẩu cũ trong DB chưa hash
+                isPasswordValid = user.PasswordHash == model.Password; // Fallback so sánh trực tiếp nếu mật khẩu cũ chưa hash
             }
 
             if (!isPasswordValid)
