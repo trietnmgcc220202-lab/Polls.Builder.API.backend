@@ -5,7 +5,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "pollbuilder-pollservice.onrender.com",
+          "Host": "pollbuilder-pollservice-98x5.onrender.com",
           "Port": 443
         }
       ],
@@ -17,7 +17,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "pollbuilder-pollservice.onrender.com",
+          "Host": "pollbuilder-pollservice-98x5.onrender.com",
           "Port": 443
         }
       ],
@@ -29,7 +29,7 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "pollbuilder-voteservice.onrender.com",
+          "Host": "pollbuilder-voteservice-nbjl.onrender.com",
           "Port": 443
         }
       ],
@@ -41,14 +41,13 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "pollbuilder-voteservice.onrender.com",
+          "Host": "pollbuilder-voteservice-nbjl.onrender.com",
           "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/votes/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
     },
-   
     {
       "DownstreamPathTemplate": "/api/auth",
       "DownstreamScheme": "https",
