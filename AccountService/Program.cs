@@ -1,4 +1,3 @@
-// [BACKEND] File: AccountService / Program.cs
 using AccountService.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -9,24 +8,24 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Lấy Secret Key chuẩn (Đồng bộ tuyệt đối 100% với PollService)
-var jwtSecretKey = builder.Configuration["Jwt:Key"] 
-    ?? "MotDoanMaBaoMatRatDaiVaKhoDoanChoPollBuilder123!@#";
+// 1. Chuỗi Secret Key dùng chung đồng bộ
+string jwtSecretKey = "MotDoanMaBaoMatRatDaiVaKhoDoanChoPollBuilder123!@#";
 
-// 1. Database PostgreSQL (Neon)
+// 2. Database PostgreSQL
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AccountDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
-// 2. JWT
+// 3. Cấu hình JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
-            
-            // Tắt ValidateIssuer & Audience để tránh lệch cấu hình giữa các Service
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateLifetime = true
@@ -37,7 +36,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// 3. CORS
+// 4. CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -49,15 +48,21 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// 4. FIX LỖI: Kiểm tra và ép buộc tạo bảng "Users" nếu chưa có trong DB
+// 5. Tự động tạo Bảng trong Database nếu chưa tồn tại (Tránh lỗi 500 do thiếu Table)
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AccountDbContext>();
-    var dbCreator = db.Database.GetService<IRelationalDatabaseCreator>();
-    
-    if (dbCreator != null && !dbCreator.HasTables())
+    try
     {
-        dbCreator.CreateTables();
+        var db = scope.ServiceProvider.GetRequiredService<AccountDbContext>();
+        var dbCreator = db.Database.GetService<IRelationalDatabaseCreator>();
+        if (dbCreator != null && !dbCreator.HasTables())
+        {
+            dbCreator.CreateTables();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Lỗi khởi tạo DB: {ex.Message}");
     }
 }
 
@@ -65,12 +70,11 @@ app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// 5. Health check
+// 6. Health check
 app.MapGet("/", () => Results.Ok("AccountService is running"));
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapControllers();
 
-// 6. Bind PORT của Render
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");
