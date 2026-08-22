@@ -1,9 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace VoteService.Contracts;
 
 public class VoteRequest
 {
+    [Required]
+    public string PollCode { get; set; } = string.Empty;
+
     [Range(0, 100)]
     public int OptionIndex { get; set; }
 }
