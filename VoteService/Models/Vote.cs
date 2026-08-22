@@ -1,12 +1,13 @@
-﻿namespace VoteService.Models;
-
-public class Vote
+namespace VoteService.Models
 {
-    public Guid Id { get; set; }
-    public Guid PollId { get; set; }
-    public int OptionIndex { get; set; }
-    public string VoterToken { get; set; } = "";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public class Vote
+    {
+        public Guid Id { get; set; }
+        public Guid PollId { get; set; }
+        public int OptionIndex { get; set; }
+        public string VoterToken { get; set; } = "";
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public Poll? Poll { get; set; }
+        public Poll? Poll { get; set; }
+    }
 }
