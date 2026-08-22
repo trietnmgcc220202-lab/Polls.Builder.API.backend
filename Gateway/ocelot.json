@@ -48,7 +48,7 @@
       "UpstreamPathTemplate": "/api/votes/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
     },
-    // --- THÊM 2 ROUTE CHO ACCOUNT SERVICE Ở ĐÂY ---
+   
     {
       "DownstreamPathTemplate": "/api/auth",
       "DownstreamScheme": "https",
