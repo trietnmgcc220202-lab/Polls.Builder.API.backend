@@ -1,67 +1,52 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Net.Http.Json;
 using VoteService.Contracts;
-using VoteService.Data;
 using VoteService.Services;
 
 namespace VoteService.Controllers
 {
     [ApiController]
-    [Route("api/polls")]
-    public class VotesController : ControllerBase
+    [Route("api/votes")]
+    public class VotesController(IVoteService votes, IConfiguration config) : ControllerBase
     {
-        private readonly IVoteService _votes;
-        private readonly AppDbContext _db;
-        private readonly IConfiguration _config;
+        private readonly IVoteService _votes = votes;
+        private readonly string _realtimeServiceUrl = config["REALTIME_SERVICE_URL"] ?? "http://pollbuilder-realtimeservice:8080";
         private const string VoterCookie = "voter_token";
 
-        public VotesController(IVoteService votes, AppDbContext db, IConfiguration config)
+        [HttpPost]
+        public async Task<ActionResult<PollResultsDto>> Vote([FromBody] VoteRequest request)
         {
-            _votes = votes;
-            _db = db;
-            _config = config;
-        }
-
-        [HttpPost("{code}/vote")]
-        public async Task<IActionResult> Vote(string code, [FromBody] VoteRequest request)
-        {
-            var token = GetOrCreateVoterToken();
+            string token = GetOrCreateVoterToken();
 
             try
             {
-                var result = await _votes.VoteAsync(code, request.OptionIndex, token);
+                // Sử dụng request.PollCode từ gói dữ liệu JSON Frontend gửi lên
+                VoteResultDto result = await _votes.VoteAsync(request.PollCode, request.OptionIndex, token);
 
+                // Gửi thông báo realtime sang RealtimeService nếu là vote mới
                 if (result.IsNewVote)
                 {
                     try
                     {
-                        var realtimeUrl = _config["RealtimeServiceUrl"] ?? "https://pollbuilder-realtimeservice.onrender.com";
                         using var http = new HttpClient();
-                        await http.PostAsJsonAsync($"{realtimeUrl}/api/notify/vote", new
+                        string notifyUrl = $"{_realtimeServiceUrl.TrimEnd('/')}/api/notify/vote";
+
+                        _ = await http.PostAsJsonAsync(notifyUrl, new
                         {
-                            Code = code,
-                            Results = result.Results
+                            Code = request.PollCode,
+                            result.Results
                         });
                     }
-                    catch { }
+                    catch
+                    {
+                        // Nếu RealtimeService chưa phản hồi thì bỏ qua, đảm bảo tiến trình vote luôn thành công
+                    }
                 }
 
                 return Ok(result.Results);
             }
             catch (KeyNotFoundException)
             {
-                // Bắt bệnh DB: Trả về số lượng Poll đang có trong DB của VoteService
-                var totalPolls = await _db.Polls.CountAsync();
-                var sampleCodes = await _db.Polls.Select(p => p.Code).Take(5).ToListAsync();
-
-                return NotFound(new
-                {
-                    error = "Poll not found in VoteService Database.",
-                    searchingCode = code,
-                    totalPollsInVoteDb = totalPolls,
-                    availableCodesInVoteDb = sampleCodes
-                });
+                return NotFound(new { error = "Poll not found." });
             }
             catch (InvalidOperationException)
             {
@@ -75,7 +60,7 @@ namespace VoteService.Controllers
 
         private string GetOrCreateVoterToken()
         {
-            if (Request.Cookies.TryGetValue(VoterCookie, out var token) && !string.IsNullOrEmpty(token))
+            if (Request.Cookies.TryGetValue(VoterCookie, out string? token) && !string.IsNullOrEmpty(token))
             {
                 return token;
             }
@@ -85,8 +70,8 @@ namespace VoteService.Controllers
             Response.Cookies.Append(VoterCookie, token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
+                Secure = true, // Bật Secure = true để hoạt động chuẩn HTTPS trên Render
+                SameSite = SameSiteMode.None, 
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
 
