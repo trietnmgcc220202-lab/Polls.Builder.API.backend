@@ -1,43 +1,55 @@
 {
-  "Routes": [
-    {
-      "DownstreamPathTemplate": "/api/polls",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
+    "Routes": [
         {
-          "Host": "pollbuilder-pollservice.onrender.com",
-          "Port": 443
-        }
-      ],
-      "UpstreamPathTemplate": "/api/polls",
-      "UpstreamHttpMethod": [ "POST" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/polls/{code}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
+            "DownstreamPathTemplate": "/api/polls",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "pollbuilder-pollservice.onrender.com",
+                    "Port": 443
+                }
+            ],
+            "UpstreamPathTemplate": "/api/polls",
+            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+        },
         {
-          "Host": "pollbuilder-pollservice.onrender.com",
-          "Port": 443
-        }
-      ],
-      "UpstreamPathTemplate": "/api/polls/{code}",
-      "UpstreamHttpMethod": [ "GET" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/polls/{code}/vote",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
+            "DownstreamPathTemplate": "/api/polls/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "pollbuilder-pollservice.onrender.com",
+                    "Port": 443
+                }
+            ],
+            "UpstreamPathTemplate": "/api/polls/{everything}",
+            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+        },
         {
-          "Host": "pollbuilder-voteservice-nbjl.onrender.com",
-          "Port": 443
+            "DownstreamPathTemplate": "/api/votes",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "pollbuilder-voteservice.onrender.com",
+                    "Port": 443
+                }
+            ],
+            "UpstreamPathTemplate": "/api/votes",
+            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+        },
+        {
+            "DownstreamPathTemplate": "/api/votes/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "pollbuilder-voteservice.onrender.com",
+                    "Port": 443
+                }
+            ],
+            "UpstreamPathTemplate": "/api/votes/{everything}",
+            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
         }
-      ],
-      "UpstreamPathTemplate": "/api/polls/{code}/vote",
-      "UpstreamHttpMethod": [ "POST" ]
+    ],
+    "GlobalConfiguration": {
+        "BaseUrl": "https://pollbuilder-gateway.onrender.com"
     }
-  ],
-  "GlobalConfiguration": {
-    "BaseUrl": "https://pollbuilder-gateway-r33h.onrender.com"
-  }
 }
