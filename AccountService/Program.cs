@@ -1,20 +1,16 @@
 using AccountService.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Database – chọn 1 trong 2 (khớp với Connection String trên Render)
-
-// --- Nếu dùng PostgreSQL (Neon) giống PollService/VoteService (KHUYẾN NGHỊ) ---
+// 1. Database PostgreSQL (Neon)
 builder.Services.AddDbContext<AccountDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// --- Nếu vẫn dùng SQL Server (Azure SQL) thì dùng dòng này, xóa dòng UseNpgsql ở trên ---
-// builder.Services.AddDbContext<AccountDbContext>(options =>
-//     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // 2. JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -42,18 +38,23 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
         policy.SetIsOriginAllowed(_ => true)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
 
 var app = builder.Build();
 
-// 4. Tạo DB + bảng nếu chưa có (tạm cho dev/Render)
+// 4. FIX LỖI: Kiểm tra và ép buộc tạo bảng "Users" nếu chưa có trong DB
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AccountDbContext>();
-    db.Database.EnsureCreated();
+    var dbCreator = db.Database.GetService<IRelationalDatabaseCreator>();
+    
+    if (dbCreator != null && !dbCreator.HasTables())
+    {
+        dbCreator.CreateTables();
+    }
 }
 
 app.UseCors("AllowAll");
@@ -69,5 +70,3 @@ app.MapControllers();
 // 6. Bind PORT của Render
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");
-
-
