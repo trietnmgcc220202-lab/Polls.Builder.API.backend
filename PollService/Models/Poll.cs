@@ -9,5 +9,7 @@ public class Poll
     public bool IsClosed { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public Guid CreatorId { get; set; }
+
     public List<Vote> Votes { get; set; } = new();
 }

@@ -1,55 +1,80 @@
 {
-    "Routes": [
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/polls",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
         {
-            "DownstreamPathTemplate": "/api/polls",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "pollbuilder-pollservice.onrender.com",
-                    "Port": 443
-                }
-            ],
-            "UpstreamPathTemplate": "/api/polls",
-            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
-        },
-        {
-            "DownstreamPathTemplate": "/api/polls/{everything}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "pollbuilder-pollservice.onrender.com",
-                    "Port": 443
-                }
-            ],
-            "UpstreamPathTemplate": "/api/polls/{everything}",
-            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
-        },
-        {
-            "DownstreamPathTemplate": "/api/votes",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "pollbuilder-voteservice.onrender.com",
-                    "Port": 443
-                }
-            ],
-            "UpstreamPathTemplate": "/api/votes",
-            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
-        },
-        {
-            "DownstreamPathTemplate": "/api/votes/{everything}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "pollbuilder-voteservice.onrender.com",
-                    "Port": 443
-                }
-            ],
-            "UpstreamPathTemplate": "/api/votes/{everything}",
-            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+          "Host": "pollbuilder-pollservice.onrender.com",
+          "Port": 443
         }
-    ],
-    "GlobalConfiguration": {
-        "BaseUrl": "https://pollbuilder-gateway.onrender.com"
+      ],
+      "UpstreamPathTemplate": "/api/polls",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/polls/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "pollbuilder-pollservice.onrender.com",
+          "Port": 443
+        }
+      ],
+      "UpstreamPathTemplate": "/api/polls/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/votes",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "pollbuilder-voteservice.onrender.com",
+          "Port": 443
+        }
+      ],
+      "UpstreamPathTemplate": "/api/votes",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/votes/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "pollbuilder-voteservice.onrender.com",
+          "Port": 443
+        }
+      ],
+      "UpstreamPathTemplate": "/api/votes/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+    },
+    // --- THÊM 2 ROUTE CHO ACCOUNT SERVICE Ở ĐÂY ---
+    {
+      "DownstreamPathTemplate": "/api/auth",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "pollbuilder-accountservice.onrender.com",
+          "Port": 443
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "pollbuilder-accountservice.onrender.com",
+          "Port": 443
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
     }
+  ],
+  "GlobalConfiguration": {
+    "BaseUrl": "https://pollbuilder-gateway.onrender.com"
+  }
 }

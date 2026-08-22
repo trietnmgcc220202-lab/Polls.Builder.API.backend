@@ -28,6 +28,17 @@ services:
     environment:
       - PORT=5003
 
+  # --- THÊM ACCOUNT SERVICE ---
+  accountservice:
+    build:
+      context: ./src/AccountService
+      dockerfile: Dockerfile
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+      - ConnectionStrings__DefaultConnection=${NEON_CONNECTION_STRING}
+
   gateway:
     build:
       context: ./src/Gateway
@@ -36,7 +47,7 @@ services:
       - "5005:5005"
     environment:
       - PORT=5005
-      # Trong mạng Docker, gọi nhau bằng TÊN SERVICE thay vì localhost
+      # Config overrides cho môi trường Docker local
       - Routes__0__DownstreamHostAndPorts__0__Host=voteservice
       - Routes__0__DownstreamHostAndPorts__0__Port=5002
       - Routes__0__DownstreamScheme=http
@@ -53,8 +64,18 @@ services:
       - Routes__3__DownstreamHostAndPorts__0__Port=5003
       - Routes__3__DownstreamScheme=http
 
+      # --- CẤU HÌNH OVERRIDE CHO ACCOUNT SERVICE (Route index 4 và 5) ---
+      - Routes__4__DownstreamHostAndPorts__0__Host=accountservice
+      - Routes__4__DownstreamHostAndPorts__0__Port=5004
+      - Routes__4__DownstreamScheme=http
+
+      - Routes__5__DownstreamHostAndPorts__0__Host=accountservice
+      - Routes__5__DownstreamHostAndPorts__0__Port=5004
+      - Routes__5__DownstreamScheme=http
+
       - GlobalConfiguration__BaseUrl=http://localhost:5005
     depends_on:
       - pollservice
       - voteservice
       - realtimeservice
+      - accountservice # <-- Thêm accountservice vào đây

@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization; // Bổ sung
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;             // Bổ sung
 using VoteService.Contracts;
 using VoteService.Services;
 
@@ -10,17 +12,22 @@ namespace VoteService.Controllers
     {
         private readonly IVoteService _votes = votes;
         private readonly string _realtimeServiceUrl = config["REALTIME_SERVICE_URL"] ?? "http://pollbuilder-realtimeservice:8080";
-        private const string VoterCookie = "voter_token";
 
+        [Authorize] // BẮT BUỘC NGƯỜI VOTE PHẢI ĐĂNG NHẬP
         [HttpPost]
         public async Task<ActionResult<PollResultsDto>> Vote([FromBody] VoteRequest request)
         {
-            string token = GetOrCreateVoterToken();
+            // 1. Lấy ID của người dùng từ Token (Thay vì dùng Cookie)
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { error = "Bạn cần đăng nhập để vote." });
+            }
 
             try
             {
-                // Sử dụng request.PollCode từ gói dữ liệu JSON Frontend gửi lên
-                VoteResultDto result = await _votes.VoteAsync(request.PollCode, request.OptionIndex, token);
+                // 2. Truyền userId (dưới dạng string) vào hàm VoteAsync để lưu lịch sử
+                VoteResultDto result = await _votes.VoteAsync(request.PollCode, request.OptionIndex, userId);
 
                 // Gửi thông báo realtime sang RealtimeService nếu là vote mới
                 if (result.IsNewVote)
@@ -38,7 +45,7 @@ namespace VoteService.Controllers
                     }
                     catch
                     {
-                        // Nếu RealtimeService chưa phản hồi thì bỏ qua, đảm bảo tiến trình vote luôn thành công
+                        // Nếu RealtimeService chưa phản hồi thì bỏ qua
                     }
                 }
 
@@ -56,26 +63,6 @@ namespace VoteService.Controllers
             {
                 return BadRequest(new { error = "Invalid option." });
             }
-        }
-
-        private string GetOrCreateVoterToken()
-        {
-            if (Request.Cookies.TryGetValue(VoterCookie, out string? token) && !string.IsNullOrEmpty(token))
-            {
-                return token;
-            }
-
-            token = Guid.NewGuid().ToString("N");
-
-            Response.Cookies.Append(VoterCookie, token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true, // Bật Secure = true để hoạt động chuẩn HTTPS trên Render
-                SameSite = SameSiteMode.None, 
-                Expires = DateTimeOffset.UtcNow.AddDays(30)
-            });
-
-            return token;
         }
     }
 }

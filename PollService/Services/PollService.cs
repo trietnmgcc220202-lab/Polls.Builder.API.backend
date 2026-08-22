@@ -17,7 +17,7 @@ public class PollService : IPollService
     }
 
     public async Task<PollDto> CreatePollAsync(string question,
-List<string> options)
+        List<string> options, Guid creatorId)
     {
         if (string.IsNullOrWhiteSpace(question))
             throw new ArgumentException("Question is required.");
@@ -28,7 +28,7 @@ List<string> options)
             .ToList();
 
         if (cleanOptions.Count < 2 || cleanOptions.Count > 6)
-            throw new ArgumentException("Options must be between 2 and 6."); 
+            throw new ArgumentException("Options must be between 2 and 6.");
 
 
         var poll = new Poll
@@ -38,7 +38,8 @@ List<string> options)
             Question = question.Trim(),
             OptionsJson = JsonSerializer.Serialize(cleanOptions),
             IsClosed = false,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatorId = creatorId
         };
 
         _db.Polls.Add(poll);
@@ -54,6 +55,16 @@ List<string> options)
             .FirstOrDefaultAsync(p => p.Code == code);
 
         return poll is null ? null : ToDto(poll);
+    }
+
+    public async Task<List<PollDto>> GetPollsByUserAsync(Guid userId)
+    {
+        var polls = await _db.Polls
+            .AsNoTracking()
+            .Where(p => p.CreatorId == userId)
+            .ToListAsync();
+
+        return polls.Select(ToDto).ToList();
     }
 
     public async Task<PollResultsDto?> GetResultsAsync(string code)
@@ -100,7 +111,8 @@ code);
             poll.Question,
             options.Select((text, i) => new PollOptionDto(i,
 text)).ToList(),
-            poll.IsClosed ? "closed" : "open"
+            poll.IsClosed ? "closed" : "open",
+            poll.CreatorId
         );
     }
 

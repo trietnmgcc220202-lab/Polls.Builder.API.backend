@@ -17,7 +17,8 @@ public record PollDto(
     string Code,
     string Question,
     List<PollOptionDto> Options,
-    string Status
+    string Status,
+    Guid CreatorId
 );
 
 public record PollResultsDto(

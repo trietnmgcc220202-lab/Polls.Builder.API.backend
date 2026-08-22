@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using PollService.Data;
 using PollService.Services;
 
@@ -26,6 +29,24 @@ builder.Services.AddCors(options =>
     });
 });
 
+// JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime = true
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -36,6 +57,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseRouting();
 app.UseCors("AllowAll");
+
+app.UseAuthentication(); // <-- Bắt buộc phải có để xài Token
+app.UseAuthorization();
 
 // Health check endpoints (bắt buộc để Render pass health check)
 app.MapGet("/", () => Results.Ok("PollService is running"));

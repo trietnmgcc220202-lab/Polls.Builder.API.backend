@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using VoteService.Data;
 using VoteService.Services;
 
@@ -29,23 +32,45 @@ builder.Services.AddScoped<IVoteService, VoteService.Services.VoteService>();
 builder.Services.AddCors(o => o.AddPolicy("AllowAll", p =>
     p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
-// 5. Port linh hoạt từ Render
+// 5. JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime = true
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// 6. Port linh hoạt từ Render
 string port = Environment.GetEnvironmentVariable("PORT") ?? "5002";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 WebApplication app = builder.Build();
 
-// 6. Bật Swagger trên cả Production
+// 7. Bật Swagger trên cả Production
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "VoteService API v1");
 });
 
-// 7. Endpoint Health Check
+// 8. Endpoint Health Check
 app.MapGet("/", () => Results.Ok("VoteService API is running!"));
 
 app.UseCors("AllowAll");
+
+app.UseAuthentication(); // <-- Bắt buộc phải có để xài Token
+app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

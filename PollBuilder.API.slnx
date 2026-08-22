@@ -5,6 +5,7 @@
     <File Path="render.yaml" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="AccountService/AccountService.csproj" />
     <Project Path="Gateway/Gateway.csproj" />
     <Project Path="PollService/PollService.csproj" />
     <Project Path="RealtimeService/RealtimeService.csproj" />
