@@ -1,4 +1,4 @@
-﻿using AccountService.Data;
+using AccountService.Data;
 using AccountService.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -44,11 +44,13 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return Unauthorized("Email hoặc mật khẩu không đúng.");
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!);
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[]
@@ -66,9 +68,9 @@ public class AuthController : ControllerBase
 
         return Ok(new
         {
-            Token = tokenHandler.WriteToken(token),
-            UserId = user.Id,
-            Email = user.Email
+            token = tokenHandler.WriteToken(token),
+            userId = user.Id,
+            email = user.Email
         });
     }
 }
