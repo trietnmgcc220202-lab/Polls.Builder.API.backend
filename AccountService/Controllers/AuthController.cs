@@ -1,4 +1,3 @@
-// [BACKEND] File: Controllers/AuthController.cs (trong dự án AccountService)
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -6,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AccountService.Data;
+using AccountService.Models;
 
 namespace AccountService.Controllers
 {
@@ -14,86 +14,103 @@ namespace AccountService.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AccountDbContext _context;
-        private readonly IConfiguration _configuration;
 
-        public AuthController(AccountDbContext context, IConfiguration configuration)
+        public AuthController(AccountDbContext context)
         {
             _context = context;
-            _configuration = configuration;
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest model)
         {
-            if (string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
+            try
             {
-                return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
+                if (model == null || string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
+                {
+                    return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
+                }
+
+                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+                if (existingUser != null)
+                {
+                    return BadRequest(new { message = "Email này đã được đăng ký." });
+                }
+
+                string hash;
+                try
+                {
+                    hash = BCrypt.Net.BCrypt.HashPassword(model.Password);
+                }
+                catch
+                {
+                    hash = model.Password;
+                }
+
+                var user = new User
+                {
+                    Email = model.Email,
+                    PasswordHash = hash,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                var token = GenerateJwtToken(user);
+                return Ok(new { token = token, Token = token, userId = user.Id, email = user.Email });
             }
-
-            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
-            if (existingUser != null)
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Email này đã được đăng ký." });
+                return StatusCode(500, new { message = $"Lỗi Server khi đăng ký: {ex.Message}" });
             }
-
-            var user = new User
-            {
-                Email = model.Email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            var token = GenerateJwtToken(user);
-            return Ok(new { Token = token, token = token, userId = user.Id, email = user.Email });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest model)
         {
-            if (string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
-            {
-                return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
-            }
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
-            if (user == null)
-            {
-                return Unauthorized(new { message = "Email hoặc Mật khẩu không chính xác." });
-            }
-
-            bool isPasswordValid = false;
             try
             {
-                isPasswordValid = BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash);
+                if (model == null || string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
+                {
+                    return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
+                }
+
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "Email hoặc Mật khẩu không chính xác." });
+                }
+
+                bool isValid = false;
+                if (!string.IsNullOrEmpty(user.PasswordHash))
+                {
+                    try
+                    {
+                        isValid = BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash);
+                    }
+                    catch
+                    {
+                        isValid = (user.PasswordHash == model.Password);
+                    }
+                }
+
+                if (!isValid)
+                {
+                    return Unauthorized(new { message = "Email hoặc Mật khẩu không chính xác." });
+                }
+
+                var token = GenerateJwtToken(user);
+                return Ok(new { token = token, Token = token, userId = user.Id, email = user.Email });
             }
-            catch
+            catch (Exception ex)
             {
-                isPasswordValid = user.PasswordHash == model.Password; // Fallback so sánh trực tiếp nếu mật khẩu cũ trong DB chưa hash
+                return StatusCode(500, new { message = $"Lỗi Server khi đăng nhập: {ex.Message}" });
             }
-
-            if (!isPasswordValid)
-            {
-                return Unauthorized(new { message = "Email hoặc Mật khẩu không chính xác." });
-            }
-
-            var token = GenerateJwtToken(user);
-
-            // Trả về cả Token và token để đảm bảo Frontend luôn đọc được
-            return Ok(new { Token = token, token = token, userId = user.Id, email = user.Email });
         }
 
         private string GenerateJwtToken(User user)
         {
-            // Lấy Secret Key từ Configuration, nếu rỗng sẽ tự lấy đúng chuỗi đã đồng bộ với PollService
-            var jwtKey = _configuration["Jwt:Key"];
-            if (string.IsNullOrWhiteSpace(jwtKey))
-            {
-                jwtKey = "MotDoanMaBaoMatRatDaiVaKhoDoanChoPollBuilder123!@#";
-            }
-
+            string jwtKey = "MotDoanMaBaoMatRatDaiVaKhoDoanChoPollBuilder123!@#";
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -106,8 +123,6 @@ namespace AccountService.Controllers
             };
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
                 claims: claims,
                 expires: DateTime.UtcNow.AddDays(7),
                 signingCredentials: creds
@@ -117,7 +132,6 @@ namespace AccountService.Controllers
         }
     }
 
-    // các DTO hỗ trợ nhận request
     public class RegisterRequest
     {
         public string Email { get; set; } = string.Empty;
