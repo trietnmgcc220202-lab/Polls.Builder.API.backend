@@ -10,7 +10,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
+      "ForwardHeaders": [ "Authorization" ]
     },
     {
       "DownstreamPathTemplate": "/api/polls/{everything}",
@@ -22,7 +23,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/polls/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
+      "ForwardHeaders": [ "Authorization" ]
     },
     {
       "DownstreamPathTemplate": "/api/votes",
@@ -34,7 +36,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/votes",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
+      "ForwardHeaders": [ "Authorization" ]
     },
     {
       "DownstreamPathTemplate": "/api/votes/{everything}",
@@ -46,7 +49,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/votes/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
+      "ForwardHeaders": [ "Authorization" ]
     },
     {
       "DownstreamPathTemplate": "/api/auth",
@@ -82,10 +86,11 @@
         }
       ],
       "UpstreamPathTemplate": "/api/realtime/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
+      "ForwardHeaders": [ "Authorization" ]
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "https://pollbuilder-gateway-r33h.onrender.com"
+"BaseUrl": "https://pollbuilder-gateway-r33h.onrender.com"
   }
 }
