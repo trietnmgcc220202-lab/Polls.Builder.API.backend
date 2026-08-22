@@ -2,42 +2,50 @@ using Microsoft.EntityFrameworkCore;
 using VoteService.Data;
 using VoteService.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+// 1. Logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+// 2. Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+// 3. PostgreSQL Connection
+string? conn = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(conn))
+{
+    throw new InvalidOperationException("LỖI: Chưa khai báo 'DefaultConnection'!");
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(conn));
 
 builder.Services.AddScoped<IVoteService, VoteService.Services.VoteService>();
 
-builder.Services.AddCors(options =>
+// 4. CORS Policy
+builder.Services.AddCors(o => o.AddPolicy("AllowAll", p =>
+    p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
+// 5. Port linh hoạt từ Render
+string port = Environment.GetEnvironmentVariable("PORT") ?? "5002";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+WebApplication app = builder.Build();
+
+// 6. Bật Swagger trên cả Production
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.SetIsOriginAllowed(_ => true)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VoteService API v1");
 });
 
-var app = builder.Build();
+// 7. Endpoint Health Check
+app.MapGet("/", () => Results.Ok("VoteService API is running!"));
 
-app.UseSwagger();
-app.UseSwaggerUI();
-
-app.UseRouting();
 app.UseCors("AllowAll");
-
-// Khai báo 2 route kiểm tra sức khỏe
-app.MapGet("/", () => "VoteService is RUNNING!");
-app.MapGet("/health", () => Results.Ok("OK")); // <--- Thêm dòng này để Render nhả lock
-
 app.MapControllers();
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5002";
-app.Run($"http://0.0.0.0:{port}");
+app.Run();
