@@ -1,0 +1,62 @@
+name: Backend CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-cd.yml'
+
+jobs:
+  docker-and-deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: poll
+            context: backend/PollService.Api
+            image: pollbuilder-poll
+            hook_secret: POLL_RENDER_DEPLOY_HOOK_URL
+          - name: vote
+            context: backend/VoteService.Api
+            image: pollbuilder-vote
+            hook_secret: VOTE_RENDER_DEPLOY_HOOK_URL
+          - name: realtime
+            context: backend/RealtimeService.Api
+            image: pollbuilder-realtime
+            hook_secret: REALTIME_RENDER_DEPLOY_HOOK_URL
+          - name: gateway
+            context: backend/ApiGateway
+            image: pollbuilder-gateway
+            hook_secret: GATEWAY_RENDER_DEPLOY_HOOK_URL
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and push ${{ matrix.name }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trigger Render deploy
+        env:
+          POLL_RENDER_DEPLOY_HOOK_URL: ${{ secrets.POLL_RENDER_DEPLOY_HOOK_URL }}
+          VOTE_RENDER_DEPLOY_HOOK_URL: ${{ secrets.VOTE_RENDER_DEPLOY_HOOK_URL }}
+          REALTIME_RENDER_DEPLOY_HOOK_URL: ${{ secrets.REALTIME_RENDER_DEPLOY_HOOK_URL }}
+          GATEWAY_RENDER_DEPLOY_HOOK_URL: ${{ secrets.GATEWAY_RENDER_DEPLOY_HOOK_URL }}
+          HOOK_NAME: ${{ matrix.hook_secret }}
+        run: |
+          HOOK_URL="${!HOOK_NAME}"
+          test -n "$HOOK_URL"
+          curl --fail --show-error --silent "$HOOK_URL"

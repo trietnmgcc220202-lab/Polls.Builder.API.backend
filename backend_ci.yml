@@ -1,0 +1,38 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore PollService
+        run: dotnet restore backend/PollService.Api/PollService.Api.csproj
+      - name: Restore VoteService
+        run: dotnet restore backend/VoteService.Api/VoteService.Api.csproj
+      - name: Restore RealtimeService
+        run: dotnet restore backend/RealtimeService.Api/RealtimeService.Api.csproj
+      - name: Restore Gateway
+        run: dotnet restore backend/ApiGateway/ApiGateway.csproj
+
+      - name: Build PollService
+        run: dotnet build backend/PollService.Api/PollService.Api.csproj -c Release --no-restore
+      - name: Build VoteService
+        run: dotnet build backend/VoteService.Api/VoteService.Api.csproj -c Release --no-restore
+      - name: Build RealtimeService
+        run: dotnet build backend/RealtimeService.Api/RealtimeService.Api.csproj -c Release --no-restore
+      - name: Build Gateway
+        run: dotnet build backend/ApiGateway/ApiGateway.csproj -c Release --no-restore
+
+      - name: Unit tests
+        run: dotnet test backend/PollBuilder.Tests/PollBuilder.Tests.csproj -c Release
