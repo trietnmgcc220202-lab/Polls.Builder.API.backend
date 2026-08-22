@@ -1,23 +1,30 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using PollService.Data;
 using PollService.Services;
 
+// 1. Tắt tự động mapping claim để giữ nguyên "nameid", "email" từ AccountService
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Controllers & Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Database Context (PostgreSQL Neon)
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(conn));
 
+// Dependency Injection
 builder.Services.AddScoped<IPollService, PollService.Services.PollService>();
 
-// Cấu hình CORS cho phép Credentials (Cookie/Token)
+// Cấu hình CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -29,17 +36,22 @@ builder.Services.AddCors(options =>
     });
 });
 
-// JWT Authentication - Đã tối ưu nhận Token từ AccountService
+// Lấy Secret Key chuẩn (Đồng bộ tuyệt đối với AccountService)
+var jwtSecretKey = builder.Configuration["Jwt:Key"] 
+    ?? "MotDoanMaBaoMatRatDaiVaKhoDoanChoPollBuilder123!@#";
+
+// Cấu hình JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "MySuperSecretKeyForPollBuilderApp2026ExactKeyMustBe32CharsLong!")),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
             
-            // Tắt kiểm tra Issuer và Audience để tránh lỗi lệch tên miền giữa Render và Local/Gateway
+            // Tắt kiểm tra Issuer & Audience để không bị lỗi tên miền trên Render / Gateway
             ValidateIssuer = false,
             ValidateAudience = false,
             
@@ -52,23 +64,26 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// Swagger UI
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// Middleware Pipeline
 app.UseRouting();
 app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Health check endpoints
+// Health Check Endpoints
 app.MapGet("/", () => Results.Ok("PollService is running"));
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapControllers();
 
+// Render Dynamic Port
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5001";
 app.Run($"http://0.0.0.0:{port}");
