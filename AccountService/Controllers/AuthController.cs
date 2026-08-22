@@ -30,7 +30,7 @@ namespace AccountService.Controllers
                     return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
                 }
 
-                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email.Trim());
                 if (existingUser != null)
                 {
                     return BadRequest(new { message = "Email này đã được đăng ký." });
@@ -48,7 +48,7 @@ namespace AccountService.Controllers
 
                 var user = new User
                 {
-                    Email = model.Email,
+                    Email = model.Email.Trim(),
                     PasswordHash = hash,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -61,7 +61,7 @@ namespace AccountService.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Lỗi Server khi đăng ký: {ex.Message}" });
+                return StatusCode(500, new { message = $"DB Error Register: {ex.InnerException?.Message ?? ex.Message}" });
             }
         }
 
@@ -75,7 +75,8 @@ namespace AccountService.Controllers
                     return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
                 }
 
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+                var cleanEmail = model.Email.Trim();
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == cleanEmail);
                 if (user == null)
                 {
                     return Unauthorized(new { message = "Email hoặc Mật khẩu không chính xác." });
@@ -104,7 +105,7 @@ namespace AccountService.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Lỗi Server khi đăng nhập: {ex.Message}" });
+                return StatusCode(500, new { message = $"DB Error Login: {ex.InnerException?.Message ?? ex.Message}" });
             }
         }
 
