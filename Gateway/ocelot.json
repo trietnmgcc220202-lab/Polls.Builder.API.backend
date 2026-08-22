@@ -59,7 +59,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/auth",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ]
     },
     {
       "DownstreamPathTemplate": "/api/auth/{everything}",
@@ -71,7 +71,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/auth/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ]
     }
   ],
   "GlobalConfiguration": {
