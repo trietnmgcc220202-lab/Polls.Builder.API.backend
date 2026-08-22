@@ -6,6 +6,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AccountService.Data;
+using AccountService.Models;
+using AccountService.Entities;
 
 namespace AccountService.Controllers
 {
@@ -117,7 +119,7 @@ namespace AccountService.Controllers
         }
     }
 
-    // các DTO hỗ trợ nhận request
+    // Các DTO hỗ trợ nhận request
     public class RegisterRequest
     {
         public string Email { get; set; } = string.Empty;
