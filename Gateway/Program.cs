@@ -34,6 +34,10 @@ var app = builder.Build();
 app.UseCors("AllowFrontend");
 app.UseWebSockets();
 
+// 6. Endpoint health check cho Render — PHẢI đặt trước UseOcelot,
+//    vì Ocelot sẽ "nuốt" toàn bộ request không khớp route và trả lỗi
+app.MapGet("/", () => Results.Ok("Gateway is running"));
+
 await app.UseOcelot();
 
 app.Run();
