@@ -1,35 +1,32 @@
 using Microsoft.EntityFrameworkCore;
 using VoteService.Models;
 
-namespace VoteService.Data;
-
-public class AppDbContext : DbContext
+namespace VoteService.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
-    public DbSet<Poll> Polls => Set<Poll>();
-    public DbSet<Vote> Votes => Set<Vote>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
     {
-        modelBuilder.Entity<Poll>(e =>
-        {
-            // Đã xóa e.ToTable("Polls") để khớp với PollService
-            e.HasKey(x => x.Id);
-            e.HasIndex(x => x.Code).IsUnique();
-            e.Property(x => x.Code).HasMaxLength(12);
-            e.Property(x => x.Question).HasMaxLength(500);
-        });
+        public DbSet<Poll> Polls => Set<Poll>();
+        public DbSet<Vote> Votes => Set<Vote>();
 
-        modelBuilder.Entity<Vote>(e =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Đã xóa e.ToTable("Votes") để khớp với PollService
-            e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.PollId, x.VoterToken }).IsUnique(); 
-            e.HasOne(x => x.Poll)
-             .WithMany(p => p.Votes)
-             .HasForeignKey(x => x.PollId)
-             .OnDelete(DeleteBehavior.Cascade);
-        });
+            _ = modelBuilder.Entity<Poll>(e =>
+            {
+                _ = e.HasKey(x => x.Id);
+                _ = e.HasIndex(x => x.Code).IsUnique();
+                _ = e.Property(x => x.Code).HasMaxLength(12);
+                _ = e.Property(x => x.Question).HasMaxLength(500);
+            });
+
+            _ = modelBuilder.Entity<Vote>(e =>
+            {
+                _ = e.HasKey(x => x.Id);
+                _ = e.HasIndex(x => new { x.PollId, x.VoterToken }).IsUnique();
+                _ = e.HasOne(x => x.Poll)
+                 .WithMany(p => p.Votes)
+                 .HasForeignKey(x => x.PollId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
     }
 }
